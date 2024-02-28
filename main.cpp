@@ -1,24 +1,50 @@
-#include <GL/glew.h> // Include GLEW to manage OpenGL extensions
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <fstream>
 #include <iostream>
+#include <sstream>
+#include <string>
 
-// Vertex Shader source code
-const char *vertexShaderSource =
-    "#version 330 core\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "void main()\n"
-    "{\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-    "}\0";
+std::string readFile(const char *filePath) {
+  std::string content;
+  std::ifstream fileStream(filePath, std::ios::in);
 
-// Fragment Shader source code
-const char *fragmentShaderSource =
-    "#version 330 core\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-    "}\0";
+  if (!fileStream.is_open()) {
+    std::cerr << "Could not read file " << filePath << ". File does not exist."
+              << std::endl;
+    return "";
+  }
+
+  std::string line = "";
+  while (!fileStream.eof()) {
+    std::getline(fileStream, line);
+    content.append(line + "\n");
+  }
+
+  fileStream.close();
+  return content;
+}
+
+void addShader(GLuint program, const char *shaderCode, GLenum shaderType) {
+  GLuint shader = glCreateShader(shaderType);
+  glShaderSource(shader, 1, &shaderCode, NULL);
+  glCompileShader(shader);
+
+  int success;
+  char infoLog[512];
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  if (!success) {
+    glGetShaderInfoLog(shader, 512, NULL, infoLog);
+    std::cerr << "ERROR::SHADER_COMPILATION_ERROR of type: " << shaderType
+              << "\n"
+              << infoLog
+              << "\n -- --------------------------------------------------- -- "
+              << std::endl;
+  }
+
+  glAttachShader(program, shader);
+  glDeleteShader(shader);
+}
 
 int main() {
   if (!glfwInit()) {
@@ -48,46 +74,25 @@ int main() {
   }
 
   // Build and compile our shader program
-  // Vertex shader
-  unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-  glCompileShader(vertexShader);
-  // Check for shader compile errors
-  int success;
-  char infoLog[512];
-  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-    std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-              << infoLog << std::endl;
-  }
+  // Build and compile our shader program
+  GLuint shaderProgram = glCreateProgram();
+  std::string vertexShaderCode = readFile("../vertexShader.glsl");
+  std::string fragmentShaderCode = readFile("../fragShader.glsl");
 
-  // Fragment shader
-  unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-  glCompileShader(fragmentShader);
-  // Check for shader compile errors
-  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-    std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
-              << infoLog << std::endl;
-  }
+  addShader(shaderProgram, vertexShaderCode.c_str(), GL_VERTEX_SHADER);
+  addShader(shaderProgram, fragmentShaderCode.c_str(), GL_FRAGMENT_SHADER);
 
-  // Link shaders
-  unsigned int shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
   glLinkProgram(shaderProgram);
   // Check for linking errors
+  int success;
+  char infoLog[512];
   glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
   if (!success) {
     glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
     std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
               << infoLog << std::endl;
   }
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
+  // glDeleteShader(shaderProgram);
 
   // Set up vertex data (and buffer(s)) and configure vertex attributes
   float vertices[] = {
