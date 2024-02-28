@@ -1,0 +1,3 @@
+/Users/cal/projects/shaderArt/build/CMakeFiles/shaderArt.dir
+/Users/cal/projects/shaderArt/build/CMakeFiles/edit_cache.dir
+/Users/cal/projects/shaderArt/build/CMakeFiles/rebuild_cache.dir
